@@ -1,6 +1,7 @@
 module Lib
     ( someFunc
     ) where
+import Server.hs (main)
 
 someFunc :: IO ()
-someFunc = putStrLn "someFunc"
+someFunc = main
