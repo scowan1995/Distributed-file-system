@@ -1,7 +1,7 @@
 module Lib
     ( someFunc
     ) where
-import Server.hs (main)
+import UserServer (startServer')
 
 someFunc :: IO ()
-someFunc = main
+someFunc = startServer'

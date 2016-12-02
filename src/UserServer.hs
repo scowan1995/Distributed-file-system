@@ -7,7 +7,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Server where
+module UserServer where
 
 import Prelude ()
 import Prelude.Compat
@@ -34,7 +34,8 @@ import Text.Blaze.Html.Renderer.Utf8
 import qualified Data.Aeson.Parser
 import qualified Text.Blaze.Html
 
-type userAPI' = "users" :> GET '[JSON] [User]
+type UserAPI1 = "users" :> Get '[JSON] [User]
+--type AddUserAPI1 = "adduser" :> ReqBody '[JSON] User :> Post '[JSON] 
 
 data User = User {
   username :: String,
@@ -44,13 +45,13 @@ data User = User {
 instance ToJSON User
 
 users :: [User]
-users = 
+users =
   [ User "Admin" "password",
     User "John" "john",
     User "Mary" "mary"
-  ] 
+  ]
 
-server' :: Server userAPI'
+server' :: Server UserAPI1
 server' = return users
 
 userAPI :: Proxy UserAPI1
@@ -59,5 +60,5 @@ userAPI = Proxy
 app :: Application
 app = serve userAPI server'
 
-main :: IO ()
-main = run 2000 app
+startServer' :: IO ()
+startServer' = run 2000 app
