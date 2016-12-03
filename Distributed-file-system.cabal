@@ -15,8 +15,9 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Lib
-                    ,  UserServer
+  exposed-modules:     Api
+                     , App
+                     , Models
   build-depends:       base >= 4.7 && < 5
                      , base-compat >= 0.9.1
                      , mtl >= 2.2.1
@@ -29,11 +30,20 @@ library
                      , http-media >= 0.6.4
                      , wai >= 3.2.1.1
                      , warp >= 3.2.9
+                     , servant
                      , servant-server >= 0.8.1
                      , directory >= 1.2.6.2
                      , blaze-markup >= 0.7.1.0
                      , blaze-html >= 0.8.1.2
                      , aeson-compat >= 0.3.6
+                     , either >= 4.4.1.1
+                     , persistent
+                     , persistent-template
+                     , monad-logger >= 0.3.20.1
+                     , persistent-sqlite
+                     , bson-generic >= 0.0.8
+                     , resourcet >= 1.1.8.1
+                     , text >= 1.2.2.1
 
   default-language:    Haskell2010
 
