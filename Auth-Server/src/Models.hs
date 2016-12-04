@@ -18,10 +18,9 @@ share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
 User
   name Text
   password  Text
-  UniqueName name
   deriving Eq Read Show
 |]
-
+-- UniqueName name
 instance FromJSON User where
   parseJSON = withObject "User" $ \ v ->
     User <$> v .: "name"
