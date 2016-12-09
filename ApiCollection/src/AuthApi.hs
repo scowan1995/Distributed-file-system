@@ -18,27 +18,7 @@ import Database.Persist
 import Servant
 
 
-data User = User {
-	  username :: Text
-	, password :: Text
-} deriving (Eq, Read, Show)
-
-instance FromJSON User where
-  parseJSON = withObject "User" $ \ v ->
-    User <$> v .: "name"
-         <*> v .: "password"
-
-instance ToJSON User where
-  toJSON (User name password) =
-    object [ "name" .= name
-           , "password"  .= password  ]
-
-
-type Api =
-       "user" :> "add" :> ReqBody '[JSON] User :> Post '[JSON] (Maybe (Key
-       User))
-         :<|> "user" :> "get" :> Capture "name" Text  :> Get  '[JSON] (Maybe
-         User)
-
--- api :: Proxy Api
--- api = Proxy
+type AuthApi =
+       "user" :> "add" :> ReqBody '[JSON] User :> Post '[JSON] (Maybe (Key User))
+  :<|> "user" :> "get" :> Capture "name" Text  :> Get  '[JSON] (Maybe User)
+  :<|> "user" :> "getall" :> Get '[JSON] [User]

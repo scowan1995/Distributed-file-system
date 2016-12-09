@@ -19,7 +19,7 @@ import AuthApi
 import Database.Persist
 import Servant
 
-api :: Proxy Api
+api :: Proxy Auth-Api
 api = Proxy
 
 getUser :: SC.ClientM (Maybe User)
@@ -27,7 +27,7 @@ getUser :: SC.ClientM (Maybe User)
 -- doPutUser u p = doCall
 putUser :: User ->  SC.ClientM (Maybe (Key User))
 
-(getUser :<|> putUser) = SC.client api (BaseUrl Http "localhost" 3000)
+(getUser :<|> putUser) = SC.client api (BaseUrl Http "localhost" 3000 )
 
 query :: SC.ClientM ((Maybe User), (Maybe (Key User)))
 query = do
