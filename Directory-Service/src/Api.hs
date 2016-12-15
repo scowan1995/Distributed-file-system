@@ -9,18 +9,17 @@
 
 module Api where
 
-import Data.Aeson
-import Data.Aeson.TH
-import GHC.Generics
-import Data.Proxy
-import Data.Text
-import Database.Persist
-import Servant
+import           Data.Aeson
+import           Data.Aeson.TH
+import           Data.Proxy
+import           Data.Text
+import           Database.Persist
+import           GHC.Generics
+import           Servant
 
 
-type Api =
-        "list" :> Get '[JSON] Text -- returns a list of the files and dirs in a dir
-    :<|> "cd" :> Capture "dir" Text :> Get '[JSON] Text
+type Api = "list" :> Get '[JSON] Text -- returns a list of the files and dirs in a dir
+      :<|> "cd" :> Capture "dir" Text :> Get '[JSON] Text
 
 api :: Proxy Api
 api = Proxy
