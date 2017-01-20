@@ -1,25 +1,25 @@
-{-# LANGUAGE DataKinds            #-}
-{-# LANGUAGE DeriveAnyClass       #-}
-{-# LANGUAGE DeriveGeneric        #-}
-{-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE OverloadedStrings    #-}
-{-# LANGUAGE StandaloneDeriving   #-}
-{-# LANGUAGE TypeOperators        #-}
-{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE TypeFamilies      #-}
+{-# LANGUAGE TypeOperators     #-}
 
 module Api where
 
-import           Data.Aeson
-import           Data.Aeson.TH
-import           Data.Proxy
-import           Data.Text
-import           Database.Persist
-import           GHC.Generics
-import           Servant
+import Data.Proxy
+import Data.Text
+
+import Database.Persist
+
+import Models
+
+import Servant.API
 
 
-type Api = "list" :> Get '[JSON] Text -- returns a list of the files and dirs in a dir
-      :<|> "cd" :> Capture "dir" Text :> Get '[JSON] Text
+
+type Api =
+       "file" :> "add" :> ReqBody '[JSON] File1 :> Post '[JSON] (Maybe (Key File1))
+  :<|> "file" :> "get" :> Capture "name" Text  :> Get  '[JSON] (Maybe File1)
 
 api :: Proxy Api
 api = Proxy

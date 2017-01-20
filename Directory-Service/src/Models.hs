@@ -8,15 +8,26 @@
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeFamilies               #-}
 
-module Model where
+module Models where
 
 import Data.Aeson
 import Data.Text
+
 import Database.Persist.TH
 
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
-Server'
-  name Text
-  ip Text
+File1
+  filename Text
+  ip  Text
   deriving Eq Read Show
 |]
+
+instance FromJSON File1 where
+  parseJSON = withObject "File1" $ \ v ->
+    File1 <$> v .: "filename"
+         <*> v .: "ip"
+
+instance ToJSON File1 where
+  toJSON (File1 filename ip) =
+    object [ "filename" .= filename
+            , "ip" .= ip ]

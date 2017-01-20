@@ -1,52 +1,50 @@
-{-# LANGUAGE DataKinds            #-}
-{-# LANGUAGE DeriveAnyClass       #-}
-{-# LANGUAGE DeriveGeneric        #-}
-{-# LANGUAGE FlexibleInstances    #-}
-{-# LANGUAGE OverloadedStrings    #-}
-{-# LANGUAGE StandaloneDeriving   #-}
-{-# LANGUAGE TypeOperators        #-}
-{-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeFamilies      #-}
+{-# LANGUAGE TypeOperators     #-}
 
 module App where
 
-import           Api
-import           Control.Monad
 import           Control.Monad.IO.Class
-import           Control.Monad.Logger     (runStderrLoggingT)
-import           Data.Foldable            as F
+import           Control.Monad.Logger (runStderrLoggingT)
+
 import           Data.String.Conversions
-import           Data.Text                as T
+
 import           Database.Persist
 import           Database.Persist.Sql
 import           Database.Persist.Sqlite
-import           Model
+
 import           Network.Wai
 import           Network.Wai.Handler.Warp as Warp
-import           Servant
-import           System.Directory
-import           System.FilePath.Posix
 
-toText :: [FilePath] -> Text
-toText = F.foldMap pack
+import           Servant
+
+import           Data.Text
+
+import           Api
+import           Models
 
 server :: ConnectionPool -> Server Api
-server pool = showDir
-          :<|> changeDir
+server pool =
+  fileAddH :<|> fileGetH
 
   where
-    -- showDirH = liftIO $ showDir
-   -- changeDirH dir = return $ changeDir dir
+    fileAddH f = liftIO $ fileAdd f
+    fileGetH f = liftIO $ fileGet f
 
-    showDir :: Handler Text
-    showDir = liftIO $ do
-       res <- (getCurrentDirectory >>= getDirectoryContents)
-       return $ toText res
+    fileGet :: Text -> IO (Maybe File1)
+    fileGet fname = flip runSqlPersistMPool pool $ do
+      mFile <- selectFirst [File1Filename ==. fname] []
+      return $ entityVal <$> mFile
 
-    changeDir :: Text -> Handler T.Text
-    changeDir dir = do
-      liftIO $ setCurrentDirectory $ T.unpack dir
-      return ""
-
+    fileAdd :: File1 -> IO (Maybe (Key File1))
+    fileAdd f = flip runSqlPersistMPool pool $ do
+      exists <- selectFirst [File1Filename ==. (file1Filename f)] []
+      case exists of
+        Nothing -> Just <$> insert f
+        Just _ -> return Nothing
 
 
 app :: ConnectionPool -> Application
@@ -54,12 +52,12 @@ app pool = serve api $ server pool
 
 mkApp :: FilePath -> IO Application
 mkApp sqliteFile = do
-  pool <- runStderrLoggingT $ do
-    createSqlitePool (cs sqliteFile) 5
-  runSqlPool (runMigration migrateAll) pool
-  return $ app pool
+    pool <- runStderrLoggingT $ do
+      createSqlitePool (cs sqliteFile) 5
+
+    runSqlPool (runMigration migrateAll) pool
+    return $ app pool
 
 run :: FilePath -> IO ()
-run sqliteFile = do
-  setCurrentDirectory "pseudo-file-system"
+run sqliteFile =
   Warp.run 3000 =<< mkApp sqliteFile

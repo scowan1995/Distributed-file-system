@@ -17,7 +17,7 @@ library
   hs-source-dirs:      src
   exposed-modules:     Api
                     ,  App
-                    , Model
+                    , Models
   build-depends:       base >= 4.7 && < 5
                     ,  aeson
                     ,  text
@@ -26,6 +26,7 @@ library
                     , persistent-template >= 2.5.1.6
                     , persistent-sqlite
                     , string-conversions
+                    , bytestring
                     , wai
                     , warp
                     , filepath
