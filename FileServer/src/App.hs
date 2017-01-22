@@ -37,17 +37,20 @@ server pool =
     filePullH fname = liftIO $ filePull fname
     filePushH f = liftIO $ filePush f
 
-    filePull fname = flip runSqlPersistMPool pool $ do
-      mFile <- selectFirst [FileName ==. fname] []
+    filePull :: String -> IO (Maybe File)
+    filePull filename = flip runSqlPersistMPool pool $ do
+      mFile <- selectFirst [FileName ==. filename] []
       return $ entityVal <$> mFile
+      putStrln "filepull"
 
+    filePush :: File -> IO (Maybe (Key File))
     filePush f = flip runSqlPersistMPool pool $ do
       exists <- selectFirst [FileName ==. (fileName f)] []
       case exists of
         Nothing -> Just <$> insert f
         Just _ -> return Nothing
 
---
+
 
 
 app :: ConnectionPool -> Application
