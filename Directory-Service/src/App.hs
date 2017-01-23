@@ -34,14 +34,14 @@ server pool =
     fileAddH f = liftIO $ fileAdd f
     fileGetH f = liftIO $ fileGet f
 
-    fileGet :: Text -> IO (Maybe File1)
+    fileGet :: Text -> IO (Maybe Filelocation)
     fileGet fname = flip runSqlPersistMPool pool $ do
-      mFile <- selectFirst [File1Filename ==. fname] []
+      mFile <- selectFirst [FilelocationFilename ==. fname] []
       return $ entityVal <$> mFile
 
-    fileAdd :: File1 -> IO (Maybe (Key File1))
+    fileAdd :: Filelocation -> IO (Maybe (Key Filelocation))
     fileAdd f = flip runSqlPersistMPool pool $ do
-      exists <- selectFirst [File1Filename ==. (file1Filename f)] []
+      exists <- selectFirst [FilelocationFilename ==. (filelocationFilename f)] []
       case exists of
         Nothing -> Just <$> insert f
         Just _ -> return Nothing

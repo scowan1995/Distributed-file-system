@@ -7,7 +7,11 @@
 
 module Main where
 
+import Servant.JS
 import App
+import Api
 
 main :: IO ()
-main = run "sqlite.db"
+main = do
+  writeJSForAPI api jquery "Client/api.js"
+  run "sqlite.db"

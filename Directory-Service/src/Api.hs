@@ -18,8 +18,8 @@ import Servant.API
 
 
 type Api =
-       "file" :> "add" :> ReqBody '[JSON] File1 :> Post '[JSON] (Maybe (Key File1))
-  :<|> "file" :> "get" :> Capture "name" Text  :> Get  '[JSON] (Maybe File1)
+       "file" :> "add" :> ReqBody '[JSON] Filelocation :> Post '[JSON] (Maybe (Key Filelocation))
+  :<|> "file" :> "get" :> Capture "name" Text  :> Get  '[JSON] (Maybe Filelocation)
 
 api :: Proxy Api
 api = Proxy
