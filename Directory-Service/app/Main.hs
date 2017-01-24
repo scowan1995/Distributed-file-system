@@ -7,11 +7,16 @@
 
 module Main where
 
-import Servant.JS
 import App
+import qualified Lackey as L
 import Api
+import System.IO
+import Data.Text
+
+ruby :: Text
+ruby = L.rubyForAPI api
 
 main :: IO ()
 main = do
-  writeJSForAPI api jquery "Client/api.js"
+  writeFile "./Client/methods.rb" (unpack ruby)
   run "sqlite.db"

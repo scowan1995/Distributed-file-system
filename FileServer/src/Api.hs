@@ -34,7 +34,7 @@ import Models
 import Servant.API
 
 -- filepush is where the body of the request is a json file with a file in it in a bytestring, it returns Just the name of the file that has been successfully uploaded or nothing.
-type Api = "filepush" :> ReqBody '[JSON] File :> Post '[JSON] (Maybe (Key File))
+type Api = "filepush" :> ReqBody '[JSON] File :> Post '[JSON] (Maybe Bool)
   :<|> "filepull" :> QueryParam "filename" String :> Get '[JSON] (Maybe (File))
 
 

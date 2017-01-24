@@ -44,11 +44,13 @@ server pool =
     filePull Nothing = return Nothing
 
 
-    filePush :: File -> IO (Maybe (Key File))
+    filePush :: File -> IO (Maybe Bool)
     filePush f = flip runSqlPersistMPool pool $ do
       exists <- selectFirst [FileName ==. (fileName f)] []
       case exists of
-        Nothing -> Just <$> insert f
+        Nothing -> do
+          Just <$> insert f
+          return $ Just True
         Just _ -> return Nothing
 
 
@@ -67,4 +69,4 @@ mkApp sqliteFile = do
 
 run :: FilePath -> IO ()
 run sqliteFile =
-  Warp.run 3000 =<< mkApp sqliteFile
+  Warp.run 3002 =<< mkApp sqliteFile

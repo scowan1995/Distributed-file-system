@@ -18,6 +18,7 @@ import Database.Persist.TH
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
 Cluster
   primaryIP Text
+  deriving Eq Read Show
 Filelocation
   filename Text
   cluster  Text
