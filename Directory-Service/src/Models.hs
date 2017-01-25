@@ -18,10 +18,11 @@ import Database.Persist.TH
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
 Cluster
   primaryIP Text
+  primaryPort Int
   deriving Eq Read Show
 Filelocation
   filename Text
-  cluster  Text
+  cluster  Cluster
   deriving Eq Read Show
 |]
 
@@ -38,8 +39,10 @@ instance ToJSON Filelocation where
 instance FromJSON Cluster where
     parseJSON = withObject "Cluster" $ \ v ->
       Cluster <$> v .: "primaryIP"
+        <*> v .: "primaryPort"
 
 
 instance ToJSON Cluster where
-  toJSON (Cluster primaryIP) =
-      object [ "primaryIP" .= primaryIP]
+  toJSON (Cluster primaryIP primaryPort) =
+      object [ "primaryIP" .= primaryIP
+              , "primaryPort" .= primaryPort]

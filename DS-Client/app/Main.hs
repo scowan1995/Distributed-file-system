@@ -4,5 +4,4 @@ import Lib
 
 main :: IO ()
 main = do
-  runFS
-  runDS 
+  uf (File "this is my contents" "this is my gun")

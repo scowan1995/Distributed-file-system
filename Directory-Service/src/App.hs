@@ -29,7 +29,7 @@ server pool =
   where
     fileAddH f = liftIO $ fileAdd f
     fileGetH f = liftIO $ fileGet f
-    addClusterH f = liftIO $ addCluster f
+    addClusterH ip port = liftIO $ addCluster ip port
 
     fileGet :: Text -> IO (Maybe Filelocation)
     fileGet fname = flip runSqlPersistMPool pool $ do
@@ -39,17 +39,17 @@ server pool =
     fileAdd :: Text -> IO (Maybe Cluster)
     fileAdd f = flip runSqlPersistMPool pool $ do
       c <- selectFirst [ClusterPrimaryIP !=. f] []
-      insert (Filelocation f (clusterPrimaryIP $ entityVal $ fromJust c))
+      insert (Filelocation f (entityVal $ fromJust c))
       return $ entityVal <$> c
 
-    addCluster :: Text -> IO (Maybe Bool)
-    addCluster ip = flip runSqlPersistMPool pool $ do
+    addCluster :: Text -> Int -> IO Bool
+    addCluster ip port = flip runSqlPersistMPool pool $ do
       exists <- selectFirst [ClusterPrimaryIP ==. ip] []
       case exists of
         Nothing -> do
-          Just <$> insert (Cluster ip)
-          return $ Just True
-        Just x -> return Nothing
+          Just <$> insert (Cluster ip port)
+          return True
+        Just x -> return False
 
 
 

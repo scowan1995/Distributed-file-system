@@ -20,7 +20,7 @@ import Servant.API
 type Api =
        "file" :> "add" :> Capture "name" Text :> Post '[JSON] (Maybe Cluster)
   :<|> "file" :> "get" :> Capture "name" Text  :> Get  '[JSON] (Maybe Filelocation)
-  :<|> "addCluster" :> Capture "ip" Text :> Post '[JSON] (Maybe Bool)
+  :<|> "addcluster" :> Capture "ip" Text :> Capture "port" Int :> Get '[JSON] Bool
 
 api :: Proxy Api
 api = Proxy
