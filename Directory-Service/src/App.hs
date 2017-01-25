@@ -20,6 +20,7 @@ import           Network.Wai.Handler.Warp as Warp
 import           Servant
 import           Api
 import           Models
+import Data.Maybe
 
 server :: ConnectionPool -> Server Api
 server pool =
@@ -38,13 +39,16 @@ server pool =
     fileAdd :: Text -> IO (Maybe Cluster)
     fileAdd f = flip runSqlPersistMPool pool $ do
       c <- selectFirst [ClusterPrimaryIP !=. f] []
+      insert (Filelocation f (clusterPrimaryIP $ entityVal $ fromJust c))
       return $ entityVal <$> c
 
-    addCluster :: Text -> IO (Maybe (Key Cluster))
+    addCluster :: Text -> IO (Maybe Bool)
     addCluster ip = flip runSqlPersistMPool pool $ do
       exists <- selectFirst [ClusterPrimaryIP ==. ip] []
       case exists of
-        Nothing -> Just <$> insert (Cluster ip)
+        Nothing -> do
+          Just <$> insert (Cluster ip)
+          return $ Just True
         Just x -> return Nothing
 
 
@@ -80,5 +84,4 @@ mkApp sqliteFile = do
 
 run :: FilePath -> IO ()
 run sqliteFile =
-  Warp.run 3000 =<< mkApp sqliteFile
- 
+  Warp.run 3003 =<< mkApp sqliteFile
