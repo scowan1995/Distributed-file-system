@@ -132,6 +132,10 @@ downloadFile fname fp = do
         Just (File datum name) -> writeFile (fp ++ "/" ++ name) datum
         Nothing -> putStrLn "File locked. Try again later."
 
+reuploadFile :: File -> IO ()
+reuploadFile f = uf f
+--just a temporary measure
+
 pullfile :: FileName -> Cluster -> IO (Maybe File)
 pullfile name cluster = do
   manager <- newManager defaultManagerSettings
