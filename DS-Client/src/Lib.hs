@@ -105,16 +105,43 @@ queriesDS = do
 -- reuploadFile
 
 type FileName = String
+type IP = String
+type Port = Int
+
+
+createCluster :: IP -> Port -> IO ()
+createCluster ip port = do
+  manager <- newManager defaultManagerSettings
+  cluster <- runClientM (addCluster (pack ip) port) (ClientEnv manager (BaseUrl Http "localhost" 3003 ""))
+  case cluster of
+    Left e -> putStrLn $ "Error adding cluster: \n" ++ show cluster
+    Right True -> putStrLn $ "Cluster successfully added: \n" ++ show ip ++ " " ++ show port
+    Right _ -> putStrLn "cluster not added :("
 
 --downloads a file to a filepath and locks file
 downloadFile :: FileName -> FilePath -> IO ()
 downloadFile fname fp = do
   manager <- newManager defaultManagerSettings
-  fileloc <- runClientM (fileget fname) (ClientEnv manager (BaseUrl Http "localhost" 3003 ""))
+  fileloc <- runClientM (fileget (pack fname)) (ClientEnv manager (BaseUrl Http "localhost" 3003 ""))
   case fileloc of
-    Nothing -> putStrLn "file does not exist. Did you spell the name correctly?"
-    Just (Filelocation name (Cluster ip port)) -> do
-      file <- pullfile -- finsih off
+    Left e -> putStrLn $ "file does not exist. Did you spell the name correctly?\n" ++ show e
+    Right Nothing -> putStrLn "error in downloads file case, recieved non file object"
+    Right (Just (Filelocation name clus)) -> do
+      file <- pullfile (unpack name) clus
+      case file of
+        Just (File datum name) -> writeFile (fp ++ "/" ++ name) datum
+        Nothing -> putStrLn "File locked. Try again later."
+
+pullfile :: FileName -> Cluster -> IO (Maybe File)
+pullfile name cluster = do
+  manager <- newManager defaultManagerSettings
+  f <- runClientM (filepull (Just name)) (ClientEnv manager (BaseUrl Http (unpack (primaryIP cluster)) (primaryPort cluster) ""))
+  case f of
+
+    Left e -> do
+      putStrLn $ "problem in pullfile Client: " ++ show e
+      return Nothing
+    Right r -> return r
 
 uf :: File -> IO ()
 uf f@(File datum name) = do
@@ -138,6 +165,9 @@ pushfile (Cluster ip port) f = do
       putStrLn $ "Error in pushfile: " ++ show e
       return False
     Right (Just b) -> return b
+    Right Nothing -> do
+      putStrLn "Error in the pushfile function"
+      return False
 
 runFS :: IO ()
 runFS = do
