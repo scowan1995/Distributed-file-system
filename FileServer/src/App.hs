@@ -67,6 +67,6 @@ mkApp sqliteFile = do
     runSqlPool (runMigration migrateAll) pool
     return $ app pool
 
-run :: FilePath -> IO ()
-run sqliteFile =
-  Warp.run 3002 =<< mkApp sqliteFile
+run :: FilePath -> Int -> IO ()
+run sqliteFile port =
+  Warp.run port =<< mkApp sqliteFile

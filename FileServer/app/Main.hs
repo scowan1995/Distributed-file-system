@@ -3,4 +3,6 @@ module Main where
 import App
 
 main :: IO ()
-main = run "sqlite.db"
+main = do
+  p <- getLine
+  run "sqlite.db" (read p)

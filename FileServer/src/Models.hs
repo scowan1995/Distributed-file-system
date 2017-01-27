@@ -17,9 +17,10 @@ import Prelude.Compat
 import Data.Aeson
 import Data.Text
 import Data.ByteString
-
+import Cluster
 import Database.Persist.TH
 import GHC.Generics
+
 
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
 File
@@ -27,20 +28,23 @@ File
   name String
   deriving Eq Read Show
 ReplicationServer
-  primary Bool
-  ip  Text
+  primary Cluster
+  group Cluster
   deriving Eq Read Show
 |]
+ -- primry = main server holding rpimary copies
+ -- group = The servers in that group holding backups
+ -- Cluster bad name, basically just the details of a server (port, ip)
 
 instance FromJSON ReplicationServer where
   parseJSON = withObject "ReplicationServer" $ \ v ->
     ReplicationServer <$> v .: "primary"
-         <*> v .: "ip"
+         <*> v .: "group"
 
 instance ToJSON ReplicationServer where
-  toJSON (ReplicationServer primary ip) =
+  toJSON (ReplicationServer primary group) =
     object [ "primary" .= primary
-            , "ip" .= ip ]
+            , "group" .= group ]
 
 
 instance FromJSON File where
