@@ -38,7 +38,10 @@ server pool =
     fileGet :: Text -> IO (Maybe Filelocation)
     fileGet fname = flip runSqlPersistMPool pool $ do
       mFile <- selectFirst [FilelocationFilename ==. fname] []
-      return $  entityVal <$> mFile
+      case isLocked mFile of
+        True -> return Nothing
+        False -> return $  entityVal <$> mFile
+
 
     fileAdd :: Text -> IO (Maybe Cluster)
     fileAdd f = flip runSqlPersistMPool pool $ do
@@ -70,9 +73,11 @@ server pool =
           updateWhere [GroupsPrimary ==. (groupsPrimary (entityVal g))][GroupsSize +=. 1]
           return $ groupsPrimary (entityVal g)
 
-    createGroup :: Cluster -> IO (Key Groups)
+    createGroup :: Cluster -> IO Bool
     createGroup c = flip runSqlPersistMPool pool $ do
       insert (Groups c 1)
+      return True
+
 
 
       {-

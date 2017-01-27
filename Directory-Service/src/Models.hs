@@ -26,6 +26,7 @@ Groups
 Filelocation
   filename Text
   cluster  Cluster
+  isLocked Bool
   deriving Eq Read Show
 |]
 
@@ -33,11 +34,13 @@ instance FromJSON Filelocation where
   parseJSON = withObject "Filelocation" $ \ v ->
     Filelocation <$> v .: "filename"
          <*> v .: "cluster"
+         <*> v .: "isLocked"
 
 instance ToJSON Filelocation where
-  toJSON (Filelocation filename cluster) =
+  toJSON (Filelocation filename cluster isLocked) =
     object [ "filename" .= filename
-            , "cluster" .= cluster ]
+            , "cluster" .= cluster
+            , "isLocked" .= isLocked ]
 
 instance FromJSON Cluster where
     parseJSON = withObject "Cluster" $ \ v ->
