@@ -25,11 +25,15 @@ import Data.Maybe
 server :: ConnectionPool -> Server Api
 server pool =
   fileAddH :<|> fileGetH :<|> addClusterH
+  :<|> makeMePrimaryH :<|> addMeToGroupH :<|> createGroupH
 
   where
     fileAddH f = liftIO $ fileAdd f
     fileGetH f = liftIO $ fileGet f
     addClusterH ip port = liftIO $ addCluster ip port
+    makeMePrimaryH o_ip o_port n_ip n_port = liftIO $ makeMePrimary (Cluster o_ip o_port) (Cluster n_ip n_port)
+    addMeToGroupH c = liftIO $ addMeToGroup c
+    createGroupH c = liftIO $ createGroup c
 
     fileGet :: Text -> IO (Maybe Filelocation)
     fileGet fname = flip runSqlPersistMPool pool $ do
@@ -52,8 +56,23 @@ server pool =
         Just x -> return False
 
 
+        -- old primary cluster, new primary cluster
+    makeMePrimary :: Cluster -> Cluster -> IO ()
+    makeMePrimary c_old c_new = flip runSqlPersistMPool pool $ do
+      updateWhere [GroupsPrimary ==. c_old] [GroupsPrimary =. c_new]
 
+    addMeToGroup :: Cluster -> IO Cluster
+    addMeToGroup c = flip runSqlPersistMPool pool $ do
+      gs <- selectFirst [GroupsSize !=. 0] [Desc GroupsSize] -- pick the group with the least backup servers
+      case gs of
+        Nothing -> return (Cluster "localhost" 99999)
+        Just g -> do
+          updateWhere [GroupsPrimary ==. (groupsPrimary (entityVal g))][GroupsSize +=. 1]
+          return $ groupsPrimary (entityVal g)
 
+    createGroup :: Cluster -> IO (Key Groups)
+    createGroup c = flip runSqlPersistMPool pool $ do
+      insert (Groups c 1)
 
 
       {-

@@ -20,6 +20,9 @@ Cluster
   primaryIP Text
   primaryPort Int
   deriving Eq Read Show
+Groups
+  primary Cluster
+  size Int
 Filelocation
   filename Text
   cluster  Cluster
