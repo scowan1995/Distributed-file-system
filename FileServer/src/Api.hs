@@ -6,6 +6,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
 module Api where
 
@@ -19,6 +20,7 @@ import Data.Aeson.Types
 import Data.Attoparsec.ByteString
 import Data.ByteString (ByteString)
 import Data.List
+import Data.Proxy
 import Data.Maybe
 import Data.String.Conversions
 import Data.Time.Calendar
@@ -32,16 +34,38 @@ import System.Directory
 import Data.Text
 import qualified Data.Aeson.Parser
 import Models
-import Cluster
+-- import Server'
 import Network.HTTP.Client (newManager, defaultManagerSettings)
 import Servant.API
 
 -- filepush is where the body of the request is a json file with a file in it in a bytestring, it returns Just the name of the file that has been successfully uploaded or nothing.
-type Api = "filepush" :> ReqBody '[JSON] File :> Post '[JSON] (Maybe Bool)
+type FSApi = "filepush" :> ReqBody '[JSON] File :> Post '[JSON] (Maybe Bool)
   :<|> "filepull" :> QueryParam "filename" String :> Get '[JSON] (Maybe File)
+  :<|> "beagroup" :> Capture "ip" String :> Capture "port" Int :> Get '[JSON] ()
+  :<|> "joinagroup" :> Capture "ip" String :> Capture "port" Int :> Get '[JSON] ()
+--  :<|> "letmejoin" :> Capture "server" Server' :> Get '[JSON] Server'
+
+api :: Proxy FSApi
+api = Proxy
+
+filepush :: File -> ClientM (Maybe Bool)
+
+filepull :: Maybe String -> ClientM (Maybe File)
+
+beagroup :: String -> Int -> ClientM ()
+
+joinagroup :: String -> Int -> ClientM ()
+
+-- letmejoin :: Server' -> ClientM Server'
+
+
+
+-- :<|> joinagroup :<|> letmejoin
+
+(filepush :<|> filepull :<|> beagroup :<|> joinagroup) = client api
 
 data Groups = Groups
-  { primary :: Cluster
+  { primary :: Server'
   , size :: Int
   } deriving (Eq, Read, Show, Generic)
 
@@ -50,7 +74,7 @@ instance ToJSON Groups
 
 data Filelocation = Filelocation
   {  filename :: Text
-  ,  cluster :: Cluster
+  ,  server' :: Server'
   ,  isLocked :: Bool
 
   } deriving (Eq, Read, Show, Generic)
@@ -60,46 +84,24 @@ instance FromJSON Filelocation
 instance ToJSON Filelocation
 
 type DSApi =
-     "file" :> "add" :> Capture "name" Text :> Post '[JSON] (Maybe Cluster)
+     "file" :> "add" :> Capture "name" Text :> Post '[JSON] (Maybe Server')
   :<|> "file" :> "get" :> Capture "name" Text  :> Get  '[JSON] (Maybe Filelocation)
-  :<|> "addcluster" :> Capture "ip" Text :> Capture "port" Int :> Get '[JSON] Bool
   :<|> "makeMePrimary" :> Capture "oldip" Text :> Capture "oldport" Int :> Capture "newip" Text :> Capture "newport" Int :> Get '[JSON] ()
-  :<|> "addMeToGroup" :> ReqBody '[JSON] Cluster :> Get '[JSON] Cluster
-  :<|> "createGroup" :> ReqBody '[JSON] Cluster :> Get '[JSON] Bool
+  :<|> "addMeToGroup" :> ReqBody '[JSON] Server' :> Get '[JSON] Server'
+  :<|> "createGroup" :> ReqBody '[JSON] Server' :> Get '[JSON] Bool
 
 
 apiDS :: Proxy DSApi
 apiDS = Proxy
 
-fileadd :: Text -> ClientM (Maybe Cluster)
+fileadd :: Text -> ClientM (Maybe Server')
 
 fileget :: Text -> ClientM (Maybe Filelocation)
 
-addCluster :: Text -> Int -> ClientM Bool
-
 makeMePrimary :: Text -> Int -> Text -> Int -> ClientM ()
 
-addMeToGroup :: Cluster -> ClientM Cluster
+addMeToGroup :: Server' -> ClientM Server'
 
-createGroup :: Cluster -> ClientM Bool
+createGroup :: Server' -> ClientM Bool
 
-(fileadd :<|> fileget :<|> addCluster :<|> makeMePrimary :<|> addMeToGroup :<|> createGroup) = client apiDS
-
-beGroup :: Text -> Int -> IO ()
-beGroup ip port = do
-  manager <- newManager defaultManagerSettings
-  clus <- runClientM (createGroup (Cluster ip port)) (ClientEnv manager (BaseUrl Http "localhost" 3003 ""))
-  case clus of
-    Left e -> putStrLn $ "Error adding cluster: \n" ++ show clus
-    Right _ -> putStrLn $ "Group successfully created: \n" ++ show ip ++ " " ++ show port
-
-joinAGroup :: Cluster -> IO ()
-joinAGroup c = do
-  manager <- newManager defaultManagerSettings
-  clus <- runClientM (addMeToGroup c) (ClientEnv manager (BaseUrl Http "localhost" 3003 ""))
-  case clus of
-    Left e -> putStrLn $ "Error joining group: " ++ show e
-    Right _ -> putStrLn $ "successfully joined: " ++ show clus
-
-api :: Proxy Api
-api = Proxy
+(fileadd :<|> fileget :<|> makeMePrimary :<|> addMeToGroup :<|> createGroup) = client apiDS

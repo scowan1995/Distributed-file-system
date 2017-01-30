@@ -1,8 +1,9 @@
 module Main where
 
 import App
+import System.Environment
 
 main :: IO ()
 main = do
-  p <- getLine
-  run "sqlite.db" (read p)
+  [port, command] <- getArgs
+  run "sqlite.db" port command

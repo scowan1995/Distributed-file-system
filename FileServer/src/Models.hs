@@ -17,35 +17,43 @@ import Prelude.Compat
 import Data.Aeson
 import Data.Text
 import Data.ByteString
-import Cluster
+-- import Server'
 import Database.Persist.TH
 import GHC.Generics
 
 
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
+Server'
+  primaryIP Text
+  primaryPort Int
+  deriving Eq Read Show Generic
 File
   datum String
   name String
   deriving Eq Read Show
 ReplicationServer
-  primary Cluster
-  group Cluster
+  group Server'
   deriving Eq Read Show
+Primary
+  primaryIP String
+  primaryPort Int
+  deriving Eq Show Read
 |]
+
  -- primry = main server holding rpimary copies
  -- group = The servers in that group holding backups
- -- Cluster bad name, basically just the details of a server (port, ip)
+ -- Server' bad name, basically just the details of a server (port, ip)
 
 instance FromJSON ReplicationServer where
   parseJSON = withObject "ReplicationServer" $ \ v ->
-    ReplicationServer <$> v .: "primary"
-         <*> v .: "group"
+    ReplicationServer <$> v .: "group"
 
 instance ToJSON ReplicationServer where
-  toJSON (ReplicationServer primary group) =
-    object [ "primary" .= primary
-            , "group" .= group ]
+  toJSON (ReplicationServer group) =
+    object [ "group" .= group ]
 
+instance FromJSON Server'
+instance ToJSON Server'
 
 instance FromJSON File where
   parseJSON = withObject "File" $ \ v ->
@@ -56,3 +64,14 @@ instance ToJSON File where
   toJSON (File datum name) =
     object [ "datum" .= datum
     , "name" .= name ]
+
+
+instance FromJSON Primary where
+  parseJSON = withObject "Primary" $ \ v ->
+    Primary <$> v .: "primaryIP"
+         <*> v .: "primaryPort"
+
+instance ToJSON Primary where
+  toJSON (Primary primaryIP primaryPort) =
+    object [ "primaryIP" .= primaryIP
+    , "primaryPort" .= primaryPort ]

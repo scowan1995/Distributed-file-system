@@ -7,9 +7,13 @@
 {-# LANGUAGE QuasiQuotes                #-}
 {-# LANGUAGE TemplateHaskell            #-}
 {-# LANGUAGE TypeFamilies               #-}
-{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
-module Cluster where
+
+module Server' where
 
 
 import Prelude ()
@@ -19,14 +23,19 @@ import Data.Text
 import Data.ByteString
 import Database.Persist.TH
 import GHC.Generics
+import Data.Proxy
+import Network.HTTP.Client (newManager, defaultManagerSettings)
+import Servant.API
+import Servant.Client
+import Database.Persist
 
 
-data Cluster = Cluster
+data Server' = Server'
   {
        primaryIP :: Text
     ,  primaryPort :: Int
   } deriving (Eq, Read, Show, Generic)
-derivePersistField "Cluster"
+derivePersistField "Server'"
 
-instance FromJSON Cluster
-instance ToJSON Cluster
+instance FromJSON Server'
+instance ToJSON Server'

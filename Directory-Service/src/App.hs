@@ -22,58 +22,58 @@ import           Api
 import           Models
 import Data.Maybe
 
-server :: ConnectionPool -> Server Api
+server :: ConnectionPool -> Server DSApi
 server pool =
-  fileAddH :<|> fileGetH :<|> addClusterH
+  fileAddH :<|> fileGetH 
   :<|> makeMePrimaryH :<|> addMeToGroupH :<|> createGroupH
 
   where
     fileAddH f = liftIO $ fileAdd f
     fileGetH f = liftIO $ fileGet f
-    addClusterH ip port = liftIO $ addCluster ip port
-    makeMePrimaryH o_ip o_port n_ip n_port = liftIO $ makeMePrimary (Cluster o_ip o_port) (Cluster n_ip n_port)
+    addServer'H ip port = liftIO $ addServer' ip port
+    makeMePrimaryH o_ip o_port n_ip n_port = liftIO $ makeMePrimary (Server' o_ip o_port) (Server' n_ip n_port)
     addMeToGroupH c = liftIO $ addMeToGroup c
     createGroupH c = liftIO $ createGroup c
 
     fileGet :: Text -> IO (Maybe Filelocation)
     fileGet fname = flip runSqlPersistMPool pool $ do
-      mFile <- selectFirst [FilelocationFilename ==. fname] []
-      case isLocked mFile of
-        True -> return Nothing
-        False -> return $  entityVal <$> mFile
+      mFile <- selectFirst [FilelocationFilename ==. fname, FilelocationIsLocked ==. False] []
+      case mFile of
+        Nothing -> return Nothing
+        Just x -> return $ entityVal <$> mFile
 
 
-    fileAdd :: Text -> IO (Maybe Cluster)
+    fileAdd :: Text -> IO (Maybe Server')
     fileAdd f = flip runSqlPersistMPool pool $ do
-      c <- selectFirst [ClusterPrimaryIP !=. f] []
-      insert (Filelocation f (entityVal $ fromJust c))
+      c <- selectFirst [Server'PrimaryIP !=. f] []
+      insert (Filelocation f (entityVal $ fromJust c) False)
       return $ entityVal <$> c
 
-    addCluster :: Text -> Int -> IO Bool
-    addCluster ip port = flip runSqlPersistMPool pool $ do
-      exists <- selectFirst [ClusterPrimaryIP ==. ip] []
+    addServer' :: Text -> Int -> IO Bool
+    addServer' ip port = flip runSqlPersistMPool pool $ do
+      exists <- selectFirst [Server'PrimaryIP ==. ip] []
       case exists of
         Nothing -> do
-          Just <$> insert (Cluster ip port)
+          Just <$> insert (Server' ip port)
           return True
         Just x -> return False
 
 
-        -- old primary cluster, new primary cluster
-    makeMePrimary :: Cluster -> Cluster -> IO ()
+        -- old primary server', new primary server'
+    makeMePrimary :: Server' -> Server' -> IO ()
     makeMePrimary c_old c_new = flip runSqlPersistMPool pool $ do
       updateWhere [GroupsPrimary ==. c_old] [GroupsPrimary =. c_new]
 
-    addMeToGroup :: Cluster -> IO Cluster
+    addMeToGroup :: Server' -> IO Server'
     addMeToGroup c = flip runSqlPersistMPool pool $ do
       gs <- selectFirst [GroupsSize !=. 0] [Desc GroupsSize] -- pick the group with the least backup servers
       case gs of
-        Nothing -> return (Cluster "localhost" 99999)
+        Nothing -> return (Server' "localhost" 99999)
         Just g -> do
           updateWhere [GroupsPrimary ==. (groupsPrimary (entityVal g))][GroupsSize +=. 1]
           return $ groupsPrimary (entityVal g)
 
-    createGroup :: Cluster -> IO Bool
+    createGroup :: Server' -> IO Bool
     createGroup c = flip runSqlPersistMPool pool $ do
       insert (Groups c 1)
       return True
@@ -84,12 +84,12 @@ server pool =
       exists <- selectFirst [FilelocationFilename ==. f] []
       case exists of
         Nothing -> do
-          c <- selectFirst [ClusterPrimaryIP !=. f] []
+          c <- selectFirst [Server'PrimaryIP !=. f] []
           q <- entityVal <$> c
           case q of
             Just clus -> do
-              return $ insert (Filelocation f (clusterCluster clus))
-              return $ Just $ clusterPrimaryIP clus
+              return $ insert (Filelocation f (server'Server' clus))
+              return $ Just $ server'PrimaryIP clus
             Nothing -> return Nothing
         Just _ -> return Nothing--}
 
