@@ -24,7 +24,7 @@ import Data.Maybe
 
 server :: ConnectionPool -> Server DSApi
 server pool =
-  fileAddH :<|> fileGetH 
+  fileAddH :<|> fileGetH
   :<|> makeMePrimaryH :<|> addMeToGroupH :<|> createGroupH
 
   where
@@ -64,14 +64,14 @@ server pool =
     makeMePrimary c_old c_new = flip runSqlPersistMPool pool $ do
       updateWhere [GroupsPrimary ==. c_old] [GroupsPrimary =. c_new]
 
-    addMeToGroup :: Server' -> IO Server'
+    addMeToGroup :: Server' -> IO (Maybe Server')
     addMeToGroup c = flip runSqlPersistMPool pool $ do
       gs <- selectFirst [GroupsSize !=. 0] [Desc GroupsSize] -- pick the group with the least backup servers
       case gs of
-        Nothing -> return (Server' "localhost" 99999)
+        Nothing -> return Nothing
         Just g -> do
           updateWhere [GroupsPrimary ==. (groupsPrimary (entityVal g))][GroupsSize +=. 1]
-          return $ groupsPrimary (entityVal g)
+          return $ Just $ groupsPrimary (entityVal g)
 
     createGroup :: Server' -> IO Bool
     createGroup c = flip runSqlPersistMPool pool $ do

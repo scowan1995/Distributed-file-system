@@ -41,9 +41,9 @@ import Servant.API
 -- filepush is where the body of the request is a json file with a file in it in a bytestring, it returns Just the name of the file that has been successfully uploaded or nothing.
 type FSApi = "filepush" :> ReqBody '[JSON] File :> Post '[JSON] (Maybe Bool)
   :<|> "filepull" :> QueryParam "filename" String :> Get '[JSON] (Maybe File)
-  :<|> "beagroup" :> Capture "ip" String :> Capture "port" Int :> Get '[JSON] ()
+  :<|> "beagroup" :> Capture "ip" String :> Capture "port" Int :> Get '[JSON] Bool
   :<|> "joinagroup" :> Capture "ip" String :> Capture "port" Int :> Get '[JSON] ()
---  :<|> "letmejoin" :> Capture "server" Server' :> Get '[JSON] Server'
+  :<|> "letmejoin" :> Capture "ip" String :> Capture "port" Int :> Get '[JSON] [Server']
 
 api :: Proxy FSApi
 api = Proxy
@@ -52,17 +52,14 @@ filepush :: File -> ClientM (Maybe Bool)
 
 filepull :: Maybe String -> ClientM (Maybe File)
 
-beagroup :: String -> Int -> ClientM ()
+beagroup :: String -> Int -> ClientM Bool
 
 joinagroup :: String -> Int -> ClientM ()
 
--- letmejoin :: Server' -> ClientM Server'
+letmejoin :: String -> Int -> ClientM [Server']
 
 
-
--- :<|> joinagroup :<|> letmejoin
-
-(filepush :<|> filepull :<|> beagroup :<|> joinagroup) = client api
+(filepush :<|> filepull :<|> beagroup :<|> joinagroup :<|> letmejoin) = client api
 
 data Groups = Groups
   { primary :: Server'
@@ -87,7 +84,7 @@ type DSApi =
      "file" :> "add" :> Capture "name" Text :> Post '[JSON] (Maybe Server')
   :<|> "file" :> "get" :> Capture "name" Text  :> Get  '[JSON] (Maybe Filelocation)
   :<|> "makeMePrimary" :> Capture "oldip" Text :> Capture "oldport" Int :> Capture "newip" Text :> Capture "newport" Int :> Get '[JSON] ()
-  :<|> "addMeToGroup" :> ReqBody '[JSON] Server' :> Get '[JSON] Server'
+  :<|> "addMeToGroup" :> ReqBody '[JSON] Server' :> Get '[JSON] (Maybe Server')
   :<|> "createGroup" :> ReqBody '[JSON] Server' :> Get '[JSON] Bool
 
 
@@ -100,7 +97,7 @@ fileget :: Text -> ClientM (Maybe Filelocation)
 
 makeMePrimary :: Text -> Int -> Text -> Int -> ClientM ()
 
-addMeToGroup :: Server' -> ClientM Server'
+addMeToGroup :: Server' -> ClientM (Maybe Server')
 
 createGroup :: Server' -> ClientM Bool
 
