@@ -36,7 +36,7 @@ instance ToJSON ReplicationServer
 
 data Server' = Server'
   {
-       primaryIP :: Text
+       primaryIP :: String
     ,  primaryPort :: Int
   } deriving (Eq, Read, Show, Generic)
 
@@ -58,14 +58,17 @@ type FSApi = "filepush" :> ReqBody '[JSON] File :> Post '[JSON] (Maybe Bool)
   :<|> "beagroup" :> Capture "ip" String :> Capture "port" Int :> Get '[JSON] Bool
   :<|> "joinagroup" :> Capture "ip" String :> Capture "port" Int :> Get '[JSON] ()
   :<|> "letmejoin" :> Capture "ip" String :> Capture "port" Int :> Get '[JSON] [Server']
+  -- filepush: push a file to the file Server
+  -- filepull: request a file with "filename" and get that file back
+  -- beagroup: tell the DS to make you a new group and then become that group
 
 
 type DSApi =
        "file" :> "add" :> Capture "name" Text :> Post '[JSON] (Maybe Server')
   :<|> "file" :> "get" :> Capture "name" Text  :> Get  '[JSON] (Maybe Filelocation)
-  :<|> "makeMePrimary" :> Capture "oldip" Text :> Capture "oldport" Int :> Capture "newip" Text :> Capture "newport" Int :> Get '[JSON] ()
+  :<|> "makeMePrimary" :> Capture "oldip" String :> Capture "oldport" Int :> Capture "newip" String :> Capture "newport" Int :> Get '[JSON] ()
   :<|> "addMeToGroup" :> ReqBody '[JSON] Server' :> Get '[JSON] Server'
-  :<|> "createGroup" :> ReqBody '[JSON] Server' :> Get '[JSON] Bool
+  :<|> "createGroup" :> Capture "ip" String :> Capture "port" Int :> Get '[JSON] Bool
 
 
 apiDS :: Proxy DSApi
@@ -75,13 +78,13 @@ fileadd :: Text -> ClientM (Maybe Server')
 
 fileget :: Text -> ClientM (Maybe Filelocation)
 
-makeMePrimary :: Text -> Int -> Text -> Int -> ClientM ()
+makemeprimary :: String -> Int -> String -> Int -> ClientM ()
 
-addMeToGroup :: Server' -> ClientM Server'
+addmetogroup :: Server' -> ClientM Server'
 
-createGroup :: Server' -> ClientM Bool
+creategroup ::  String -> Int -> ClientM Bool
 
-(fileadd :<|> fileget :<|> makeMePrimary :<|> addMeToGroup :<|> createGroup) = client apiDS
+(fileadd :<|> fileget :<|> makemeprimary :<|> addmetogroup :<|> creategroup) = client apiDS
 
 apiFS :: Proxy FSApi
 apiFS = Proxy
@@ -138,11 +141,10 @@ reuploadFile f = uf f
 --just a temporary measure
 
 pullfile :: FileName -> Server' -> IO (Maybe File)
-pullfile name server' = do
+pullfile name s = do
   manager <- newManager defaultManagerSettings
-  f <- runClientM (filepull (Just name)) (ClientEnv manager (BaseUrl Http (unpack (primaryIP server')) (primaryPort server') ""))
+  f <- runClientM (filepull (Just name)) (ClientEnv manager (BaseUrl Http (primaryIP s) (primaryPort s) ""))
   case f of
-
     Left e -> do
       putStrLn $ "problem in pullfile Client: " ++ show e
       return Nothing
@@ -164,7 +166,7 @@ uf f@(File datum name) = do
 pushfile :: Server' -> File -> IO Bool
 pushfile (Server' ip port) f = do
   manager <- newManager defaultManagerSettings
-  push_res <- runClientM (filepush f) (ClientEnv manager (BaseUrl Http (unpack ip) port ""))
+  push_res <- runClientM (filepush f) (ClientEnv manager (BaseUrl Http ip port ""))
   case push_res of
     Left e -> do
       putStrLn $ "Error in pushfile: " ++ show e
@@ -178,7 +180,7 @@ pushfile (Server' ip port) f = do
 beGroup :: String -> Int -> IO ()
 beGroup ip port = do
   manager <- newManager defaultManagerSettings
-  clus <- runClientM (createGroup (Server' (pack ip) port)) (ClientEnv manager (BaseUrl Http "localhost" 3002 ""))
+  clus <- runClientM (creategroup ip port) (ClientEnv manager (BaseUrl Http ip port ""))
   case clus of
     Left e -> putStrLn $ "Error becoming group': \n" ++ show clus
     Right _ -> putStrLn $ "Group successfully created: \n" ++ show ip ++ " " ++ show port
@@ -186,7 +188,7 @@ beGroup ip port = do
 joinAGroup :: Server' -> IO ()
 joinAGroup c = do
   manager <- newManager defaultManagerSettings
-  clus <- runClientM (addMeToGroup c) (ClientEnv manager (BaseUrl Http "localhost" 3002 ""))
+  clus <- runClientM (addmetogroup c) (ClientEnv manager (BaseUrl Http "localhost" 3002 ""))
   case clus of
     Left e -> putStrLn $ "Error joining group: " ++ show e
     Right _ -> putStrLn $ "successfully joined: " ++ show clus
@@ -213,3 +215,19 @@ runDS = do
       print d
       print e
       print f
+
+tellBecomeGroup :: String -> Int -> IO ()
+tellBecomeGroup ip port = do
+  manager <- newManager defaultManagerSettings
+  res <- runClientM (beagroup ip port) (ClientEnv manager (BaseUrl Http ip port ""))
+  case res of
+    Left e -> putStrLn $ "error in tellBecomeGroup in setup: " ++ show e
+    Right r -> putStrLn $ "Successfully became group : " ++ show r
+
+tellJoinGroup :: String -> Int -> IO ()
+tellJoinGroup ip port = do
+  manager <- newManager defaultManagerSettings
+  res <- runClientM (joinagroup ip port) (ClientEnv manager (BaseUrl Http ip port ""))
+  case res of
+    Left e -> putStrLn $ "error in tellJoinGroup in setup: " ++ show e
+    Right r -> putStrLn $ ip ++ " " ++ show port ++ "Successfully joined a group"

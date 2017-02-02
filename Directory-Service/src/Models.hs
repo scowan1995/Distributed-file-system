@@ -17,12 +17,13 @@ import Database.Persist.TH
 
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
 Server'
-  primaryIP Text
+  primaryIP String
   primaryPort Int
   deriving Eq Read Show
 Groups
   primary Server'
   size Int
+  deriving Eq Read Show
 Filelocation
   filename Text
   server'  Server'
@@ -52,3 +53,14 @@ instance ToJSON Server' where
   toJSON (Server' primaryIP primaryPort) =
       object [ "primaryIP" .= primaryIP
               , "primaryPort" .= primaryPort]
+
+instance FromJSON Groups where
+  parseJSON = withObject "Groups" $ \ v ->
+    Groups <$> v .: "primary"
+        <*> v .: "size"
+
+
+instance ToJSON Groups where
+  toJSON (Groups primary size) =
+      object [ "primary" .= primary
+          , "size" .= size]

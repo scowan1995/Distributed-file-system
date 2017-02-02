@@ -24,16 +24,14 @@ import Data.Maybe
 
 server :: ConnectionPool -> Server DSApi
 server pool =
-  fileAddH :<|> fileGetH
-  :<|> makeMePrimaryH :<|> addMeToGroupH :<|> createGroupH
+  fileAddH :<|> fileGetH :<|> makeMePrimaryH :<|> addMeToGroupH :<|> createGroupH
 
   where
     fileAddH f = liftIO $ fileAdd f
     fileGetH f = liftIO $ fileGet f
-    addServer'H ip port = liftIO $ addServer' ip port
     makeMePrimaryH o_ip o_port n_ip n_port = liftIO $ makeMePrimary (Server' o_ip o_port) (Server' n_ip n_port)
-    addMeToGroupH c = liftIO $ addMeToGroup c
-    createGroupH c = liftIO $ createGroup c
+    addMeToGroupH ip port = liftIO $ addMeToGroup (Server' ip port)
+    createGroupH ip port = liftIO $ createGroup (Server' ip port)
 
     fileGet :: Text -> IO (Maybe Filelocation)
     fileGet fname = flip runSqlPersistMPool pool $ do
@@ -45,11 +43,11 @@ server pool =
 
     fileAdd :: Text -> IO (Maybe Server')
     fileAdd f = flip runSqlPersistMPool pool $ do
-      c <- selectFirst [Server'PrimaryIP !=. f] []
+      c <- selectFirst [Server'PrimaryIP !=. (unpack f)] []
       insert (Filelocation f (entityVal $ fromJust c) False)
       return $ entityVal <$> c
 
-    addServer' :: Text -> Int -> IO Bool
+    addServer' :: String -> Int -> IO Bool
     addServer' ip port = flip runSqlPersistMPool pool $ do
       exists <- selectFirst [Server'PrimaryIP ==. ip] []
       case exists of
@@ -68,14 +66,19 @@ server pool =
     addMeToGroup c = flip runSqlPersistMPool pool $ do
       gs <- selectFirst [GroupsSize !=. 0] [Desc GroupsSize] -- pick the group with the least backup servers
       case gs of
-        Nothing -> return Nothing
+        Nothing -> do
+          liftIO $ putStrLn "we got nothing222222222222222222222222\n"
+          return Nothing
         Just g -> do
+          liftIO $ putStrLn "we got something11111111111111111111111\n"
           updateWhere [GroupsPrimary ==. (groupsPrimary (entityVal g))][GroupsSize +=. 1]
           return $ Just $ groupsPrimary (entityVal g)
 
     createGroup :: Server' -> IO Bool
     createGroup c = flip runSqlPersistMPool pool $ do
       insert (Groups c 1)
+      liftIO $ putStrLn "did a thing \n"
+      insert c
       return True
 
 

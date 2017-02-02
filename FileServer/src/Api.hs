@@ -83,9 +83,9 @@ instance ToJSON Filelocation
 type DSApi =
      "file" :> "add" :> Capture "name" Text :> Post '[JSON] (Maybe Server')
   :<|> "file" :> "get" :> Capture "name" Text  :> Get  '[JSON] (Maybe Filelocation)
-  :<|> "makeMePrimary" :> Capture "oldip" Text :> Capture "oldport" Int :> Capture "newip" Text :> Capture "newport" Int :> Get '[JSON] ()
-  :<|> "addMeToGroup" :> ReqBody '[JSON] Server' :> Get '[JSON] (Maybe Server')
-  :<|> "createGroup" :> ReqBody '[JSON] Server' :> Get '[JSON] Bool
+  :<|> "makemeprimary" :> Capture "oldip" String :> Capture "oldport" Int :> Capture "newip" String :> Capture "newport" Int :> Get '[JSON] ()
+  :<|> "addmetogroup" :>  Capture "ip" String :> Capture "port" Int :> Get '[JSON] (Maybe Server')
+  :<|> "creategroup" :> Capture "ip" String :> Capture "port" Int :> Get '[JSON] Bool
 
 
 apiDS :: Proxy DSApi
@@ -95,10 +95,10 @@ fileadd :: Text -> ClientM (Maybe Server')
 
 fileget :: Text -> ClientM (Maybe Filelocation)
 
-makeMePrimary :: Text -> Int -> Text -> Int -> ClientM ()
+makemeprimary :: String -> Int -> String -> Int -> ClientM ()
 
-addMeToGroup :: Server' -> ClientM (Maybe Server')
+addmetogroup :: String -> Int -> ClientM (Maybe Server')
 
-createGroup :: Server' -> ClientM Bool
+creategroup :: String -> Int -> ClientM Bool
 
-(fileadd :<|> fileget :<|> makeMePrimary :<|> addMeToGroup :<|> createGroup) = client apiDS
+(fileadd :<|> fileget :<|> makemeprimary :<|> addmetogroup :<|> creategroup) = client apiDS

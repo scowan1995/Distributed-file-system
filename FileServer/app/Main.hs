@@ -5,5 +5,5 @@ import System.Environment
 
 main :: IO ()
 main = do
-  [port, command] <- getArgs
-  run "sqlite.db" port command
+  port <- getArgs
+  run "sqlite.db" (head port)

@@ -24,9 +24,9 @@ import GHC.Generics
 
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
 Server'
-  primaryIP Text
+  primaryIP String
   primaryPort Int
-  deriving Eq Read Show Generic
+  deriving Eq Read Show
 File
   datum String
   name String
@@ -52,8 +52,15 @@ instance ToJSON ReplicationServer where
   toJSON (ReplicationServer group) =
     object [ "group" .= group ]
 
-instance FromJSON Server'
-instance ToJSON Server'
+instance FromJSON Server' where
+  parseJSON = withObject "Server'" $ \ v ->
+    Server' <$> v .: "primaryIP"
+         <*> v .: "primaryPort"
+
+instance ToJSON Server' where
+  toJSON (Server' primaryIP primaryPort) =
+    object [ "primaryIP" .= primaryIP
+    , "primaryPort" .= primaryPort ]
 
 instance FromJSON File where
   parseJSON = withObject "File" $ \ v ->

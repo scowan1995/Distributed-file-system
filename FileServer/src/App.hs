@@ -36,7 +36,7 @@ import           Models
 askForGroup :: Server' -> IO (Maybe Server')
 askForGroup s1@(Server' oip oport) = do
   manager <- newManager defaultManagerSettings
-  x <- runClientM (addMeToGroup s1) (ClientEnv manager (BaseUrl Http "localhost" 3003 ""))
+  x <- runClientM (addmetogroup oip oport) (ClientEnv manager (BaseUrl Http "localhost" 3003 ""))
   case x of
     Left e -> do
       putStrLn $ "Error is askForGroup in FileServer: " ++ show e
@@ -44,20 +44,20 @@ askForGroup s1@(Server' oip oport) = do
     Right s -> return s
 
 
-notifyDS :: Text -> Int -> IO Bool
+notifyDS :: String -> Int -> IO Bool
 notifyDS ip port = do
   manager <- newManager defaultManagerSettings
-  x <- runClientM ( createGroup (Server' ip port)) (ClientEnv manager (BaseUrl Http "localhost" 3003 ""))
+  x <- runClientM (creategroup ip port) (ClientEnv manager (BaseUrl Http "localhost" 3003 ""))
   case x of
     Left e -> do
-    --   putStrLn $ "Error in notifyDs in Fileserver: " ++ show e
+      putStrLn $ "Error in notifyDs in Fileserver: " ++ show e
       return False
     Right x -> return True
 
-askToJoin :: Server' -> Text -> Int -> IO ( Maybe [Server'])
+askToJoin :: Server' -> String -> Int -> IO ( Maybe [Server'])
 askToJoin s@(Server' sip sport) ip port = do
   manager <- newManager defaultManagerSettings
-  x <- runClientM (letmejoin (unpack sip) sport) (ClientEnv manager (BaseUrl Http (unpack ip) port ""))
+  x <- runClientM (letmejoin sip sport) (ClientEnv manager (BaseUrl Http ip port ""))
   case x of
     Left e -> do
       return Nothing
@@ -67,14 +67,14 @@ askToJoin s@(Server' sip sport) ip port = do
 
 server :: ConnectionPool -> Server FSApi
 server pool =
-  filePushH :<|> filePullH :<|> beGroupH :<|>joinAGroupH :<|> addToGroupH
+  filePushH :<|> filePullH :<|> makePrimaryOfGroupH :<|>joinAGroupH :<|> createGroupH
 
   where
     filePullH fname = liftIO $ filePull fname
     filePushH f = liftIO $ filePush f
-    beGroupH ip port = liftIO $ beGroup ip port
+    makePrimaryOfGroupH ip port = liftIO $ beGroup ip port
     joinAGroupH ip port = liftIO $ joinAGroup ip port
-    addToGroupH ip port = liftIO $ addMeToGroup ip port
+    createGroupH ip port = liftIO $ addMeToGroup ip port
 
     filePull :: Maybe String -> IO (Maybe File)
     filePull (Just f) = flip runSqlPersistMPool pool $ do
@@ -99,9 +99,10 @@ server pool =
     beGroup :: String -> Int -> IO Bool
     beGroup ip port = flip runSqlPersistMPool pool $ do
       insert (Primary ip port)
-      insert ((Server' (pack ip) port))
-      liftIO $ notifyDS (pack ip) port
-      return True
+      insert ((Server' ip port))
+      insert (ReplicationServer (Server' ip port))
+      res <- liftIO $ notifyDS ip port
+      return res
 
 
 -- join a group:
@@ -112,12 +113,12 @@ server pool =
 -- add other servers to replication list
     joinAGroup ::String -> Int -> IO ()
     joinAGroup ip port = flip runSqlPersistMPool pool $ do
-      prime <- liftIO $ askForGroup (Server' (pack ip) port)
+      prime <- liftIO $ askForGroup (Server' ip port)
       case prime of
         Nothing -> return ()
         Just y -> do
           res <- insert (Primary ip port)
-          s <- liftIO $ askToJoin (Server' (pack ip) port) (server'PrimaryIP y) (server'PrimaryPort y)
+          s <- liftIO $ askToJoin (Server' ip port) (server'PrimaryIP y) (server'PrimaryPort y)
           case s of
             Nothing -> return ()
             Just x -> do
@@ -128,14 +129,9 @@ server pool =
 -- add server to ReplicationServer
     addMeToGroup :: String -> Int -> IO ([Server'])
     addMeToGroup ip port = flip runSqlPersistMPool pool $ do
-      x <- insert (Server' (pack ip) port)
-      ls <- selectList [Server'PrimaryIP !=. (pack ip)] []
+      x <- insert (Server' ip port)
+      ls <- selectList [Server'PrimaryIP !=. ip] []
       return $ entityVal <$> ls
-
-
-
-
-
 
 
 
@@ -153,7 +149,6 @@ mkApp sqliteFile = do
     runSqlPool (runMigration migrateAll) pool
     return $ app pool
 
-run :: FilePath -> String -> String -> IO ()
-run sqliteFile port  command = do
+run :: FilePath  -> String -> IO ()
+run sqliteFile port = do
     Warp.run (read port) =<< mkApp sqliteFile
-    putStrLn command
