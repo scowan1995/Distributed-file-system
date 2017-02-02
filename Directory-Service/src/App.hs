@@ -79,22 +79,6 @@ server pool =
       return True
 
 
-
-      {-
-      exists <- selectFirst [FilelocationFilename ==. f] []
-      case exists of
-        Nothing -> do
-          c <- selectFirst [Server'PrimaryIP !=. f] []
-          q <- entityVal <$> c
-          case q of
-            Just clus -> do
-              return $ insert (Filelocation f (server'Server' clus))
-              return $ Just $ server'PrimaryIP clus
-            Nothing -> return Nothing
-        Just _ -> return Nothing--}
-
-
-
 app :: ConnectionPool -> Application
 app pool = serve api $ server pool
 

@@ -60,18 +60,20 @@ askToJoin s@(Server' sip sport) ip port = do
   x <- runClientM (letmejoin (unpack sip) sport) (ClientEnv manager (BaseUrl Http (unpack ip) port ""))
   case x of
     Left e -> do
-      putStrLn $ "Error in ask to join in fileserver: " ++ show e
       return Nothing
     Right s -> return $ Just s
+
+--       putStrLn $ "Error in ask to join in fileserver: " ++ show e
 
 server :: ConnectionPool -> Server FSApi
 server pool =
   filePushH :<|> filePullH :<|> beGroupH :<|>joinAGroupH :<|> addToGroupH
+
   where
     filePullH fname = liftIO $ filePull fname
     filePushH f = liftIO $ filePush f
-    beGroupH ip port = liftIO $ beAGroup ip port
-    joinAGroupH s = liftIO $ joinAGroup s
+    beGroupH ip port = liftIO $ beGroup ip port
+    joinAGroupH ip port = liftIO $ joinAGroup ip port
     addToGroupH ip port = liftIO $ addMeToGroup ip port
 
     filePull :: Maybe String -> IO (Maybe File)
@@ -94,11 +96,11 @@ server pool =
 -- send http request to DS to make a group
 -- set Primary table ip and port
 -- inclue ones self in the ReplicationServer table
-    beAGroup :: String -> Int -> IO Bool
-    beAGroup ip port = flip runSqlPersistMPool pool $ do
-      res <- insert (Primary ip port)
-      res1 <- insert ((Server' (pack ip) port))
-      notifyDS (pack ip) port
+    beGroup :: String -> Int -> IO Bool
+    beGroup ip port = flip runSqlPersistMPool pool $ do
+      insert (Primary ip port)
+      insert ((Server' (pack ip) port))
+      liftIO $ notifyDS (pack ip) port
       return True
 
 
@@ -108,14 +110,14 @@ server pool =
 -- recieve list of servers in group
 -- add main server as your primary
 -- add other servers to replication list
-    joinAGroup :: Server' -> IO ()
-    joinAGroup s@(Server' ip port) = flip runSqlPersistMPool pool $ do
-      prime <- askForGroup s
+    joinAGroup ::String -> Int -> IO ()
+    joinAGroup ip port = flip runSqlPersistMPool pool $ do
+      prime <- liftIO $ askForGroup (Server' (pack ip) port)
       case prime of
         Nothing -> return ()
         Just y -> do
-          res <- insert (Primary (primaryIP y) (primaryPort y))
-          s <- askToJoin s (primaryIP prime) (primaryPort prime)
+          res <- insert (Primary ip port)
+          s <- liftIO $ askToJoin (Server' (pack ip) port) (server'PrimaryIP y) (server'PrimaryPort y)
           case s of
             Nothing -> return ()
             Just x -> do
@@ -124,11 +126,11 @@ server pool =
 
 
 -- add server to ReplicationServer
-    addMeToGroup :: Text -> Int -> IO ([Server'])
+    addMeToGroup :: String -> Int -> IO ([Server'])
     addMeToGroup ip port = flip runSqlPersistMPool pool $ do
-      x <- insert (Server' ip port)
-      ls <- selectList [Server'PrimaryIP !=. ip] []
-      return ls
+      x <- insert (Server' (pack ip) port)
+      ls <- selectList [Server'PrimaryIP !=. (pack ip)] []
+      return $ entityVal <$> ls
 
 
 

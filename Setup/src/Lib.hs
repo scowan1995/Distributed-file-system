@@ -53,10 +53,11 @@ instance FromJSON Filelocation
 instance ToJSON Filelocation
 
 
-
-
 type FSApi = "filepush" :> ReqBody '[JSON] File :> Post '[JSON] (Maybe Bool)
   :<|> "filepull" :> QueryParam "filename" String :> Get '[JSON] (Maybe File)
+  :<|> "beagroup" :> Capture "ip" String :> Capture "port" Int :> Get '[JSON] Bool
+  :<|> "joinagroup" :> Capture "ip" String :> Capture "port" Int :> Get '[JSON] ()
+  :<|> "letmejoin" :> Capture "ip" String :> Capture "port" Int :> Get '[JSON] [Server']
 
 
 type DSApi =
@@ -85,11 +86,14 @@ createGroup :: Server' -> ClientM Bool
 apiFS :: Proxy FSApi
 apiFS = Proxy
 
-filepush :: File -> ClientM (Maybe Bool)
+beagroup :: String -> Int -> ClientM Bool
 
-filepull :: Maybe String -> ClientM (Maybe File)
+joinagroup :: String -> Int -> ClientM ()
 
-(filepush :<|> filepull) = client apiFS
+letmejoin :: String -> Int -> ClientM [Server']
+
+
+(filepush :<|> filepull :<|> beagroup :<|> joinagroup :<|> letmejoin) = client apiFS
 
 queriesFS :: ClientM (Maybe Bool, Maybe Bool, Maybe File)
 queriesFS = do

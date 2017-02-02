@@ -60,7 +60,7 @@ letmejoin :: String -> Int -> ClientM [Server']
 
 
 (filepush :<|> filepull :<|> beagroup :<|> joinagroup :<|> letmejoin) = client api
-
+--
 data Groups = Groups
   { primary :: Server'
   , size :: Int
